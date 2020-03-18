@@ -11,8 +11,8 @@ user = "Admin"
 password = "12345678"
 
 #radius server param
-serverIndex = "1"               # line in param 
-ipAddress = "10.190.10.36"      # IP server
+serverIndex = "1"               # line in parameters
+ipAddress = "10.190.10.36"      # IP adress radius server
 portNo = "1812"                 # port number
 encryptionMethod = "2"          # 1 - User, 2 - CHAP
 secretKey = "nec_rrl_center"    # secret key
@@ -33,37 +33,37 @@ def readFileIP(path):
                 ipList.append(line.split(";")[1])
     return ipList
 
-def authentication(full_url):
+def authentication(url):
     # get session id first step authentication
     session = requests.session()
     post_data = {'CGI_ID': 'GET_LCT01000000_01', 'userName': user, 'password': password}
-    auth = session.post(full_url, headers = headers, data = post_data, timeout = 50)
+    auth = session.post(url, headers = headers, data = post_data, timeout = 50)
     soup = bs(auth.text, "lxml")
     sessionid = int(soup.find(id = "LCTSESSIONID").get('value'))
 
     # second step authentication 
-    postData = {'CGI_ID': f'GET_LCT01000000_02', 'USER_NAME': user,'SESSION_ID': sessionid}
-    request = session.post(full_url, headers = headers, data = postData, timeout = 50)
+    postData = {'CGI_ID': 'GET_LCT01000000_02', 'USER_NAME': user,'SESSION_ID': sessionid}
+    session.post(url, headers = headers, data = postData, timeout = 50)
     #print(request.text) #status
 
     # third step authentication posts
-    postData = {'CGI_ID': f'GET_LCT01000000_03', 'userName': user,'SESSION_ID': sessionid}
-    request = session.post(full_url, headers = headers, data = postData, timeout = 50)
+    postData = {'CGI_ID': 'GET_LCT01000000_03', 'userName': user,'SESSION_ID': sessionid}
+    session.post(url, headers = headers, data = postData, timeout = 50)
     #print(request.text) #status
 
     # fourth step authentication posts
-    postData = {'CGI_ID': f'GET_LCT01000000_04', 'USER_NAME': user,'SESSION_ID': sessionid}
-    request = session.post(full_url, headers = headers, data = postData, timeout = 50)
+    postData = {'CGI_ID': 'GET_LCT01000000_04', 'USER_NAME': user,'SESSION_ID': sessionid}
+    session.post(url, headers = headers, data = postData, timeout = 50)
     #print(request.text) #status
 
     # fifth step authentication posts
-    postData = {'CGI_ID': f'GET_LCT01000000_05', 'userName': user,'SESSION_ID': sessionid}
-    request = session.post(full_url, headers = headers, data = postData, timeout = 50)
+    postData = {'CGI_ID': 'GET_LCT01000000_05', 'userName': user,'SESSION_ID': sessionid}
+    session.post(url, headers = headers, data = postData, timeout = 50)
     #print(request.text) #status
 
     # sixth step authentication posts
-    postData = {'CGI_ID': f'GET_LCT99010100_01', 'loginuser': 'Admin', 'USER_NAME': user,'SESSION_ID': sessionid}
-    request = session.post(full_url, headers = headers, data = postData, timeout = 50)
+    postData = {'CGI_ID': 'GET_LCT99010100_01', 'loginuser': 'Admin', 'USER_NAME': user,'SESSION_ID': sessionid}
+    session.post(url, headers = headers, data = postData, timeout = 50)
     #print(request.text) # status and information
 
     return session, sessionid
@@ -78,22 +78,30 @@ def turnOnRadius():
         'USER_NAME': user,
         'SESSION_ID': sessionid
     }
-    request = session.post(full_url, headers = headers, data = postData, timeout = 20)
-    #print(radius.text)
+    request = session.post(url, headers = headers, data = postData, timeout = 20)
+    return checkStatus(request)
 
 # set parametrs of radius server
 def setParamRadius(lis):
     postData = {
         'CGI_ID': 'SET_LCT09RAD002_05', 
-        'LIST': lis,
-        'LIST_COUNT': "1",
+        'LIST': f'{lis}',
+        'LIST_COUNT': 1,
         'USER_NAME': user,
         'SESSION_ID': sessionid
         }
-    print(lis)
-    request = session.post(full_url, headers = headers, data = postData, timeout = 20)
-    print(request.text)
+    request = session.post(url, headers = headers, data = postData, timeout = 20)
+    return checkStatus(request)
 
+
+def logAndPrint(massage, ind="\t\t   ", dateform=-8):
+    date = timenow()[dateform:]
+    print(f"{ind}{massage}")
+    with open('logs.log', 'a', encoding="UTF-8") as logs:
+        logs.write(f'{ind}{date} {massage}\n')
+
+def checkStatus(reqiest):
+    return int(literal_eval(request.text)['status'][0]['cgi_status'])
 
 # Start programm
 # get ip adresess from file
@@ -101,46 +109,42 @@ def setParamRadius(lis):
 listIP = readFileIP('RRL_list.csv')
 
 for ip in listIP:
-    short_url = f'http://{ip}/'
-    full_url = f'http://{ip}/cgi/lct.cgi'
+    url = f'http://{ip}/cgi/lct.cgi'
     headers = {
     'Connection': 'keep-alive',
     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
     'Cookie': 'LCT_POLLTIME=NONE',
-    'Referer' : short_url
+    'Referer' : url
     }
 
 
     try:
-        print(f"connect to {ip}")
-        with open('logs.log', 'a', encoding="UTF-8") as logs:
-            logs.write(f'{timenow()} Подключаюсь к элемунту {ip}\n')
-        session, sessionid = authentication(full_url)
-        print (f'\t authentication sucsess')
+        logAndPrint(f"Подключаюсь к элементу {ip}", "", 0)
+        session, sessionid = authentication(url)
+        logAndPrint(f'Подключение успешно')
         try:
             # check status radius server and turn on if its off
             postData = {'CGI_ID': 'GET_LCT09RAD001_01', 'USER_NAME': user, 'SESSION_ID': sessionid}
-            request = session.post(full_url, headers = headers, data = postData, timeout = 20)
+            request = session.post(url, headers = headers, data = postData, timeout = 20)
             dic = literal_eval(request.text)
             if (dic['data'][0]['authentication'][0]['radiusAuthMethod']) == "1":
-                turnOnRadius()
-                with open('logs.log', 'a', encoding="UTF-8") as logs:
-                    logs.write(f'\t\t{timenow()} Радиус сервер успешно включен на элементе: {ip}\n')
-
+                if turnOnRadius() == 0:
+                    logAndPrint("Радиус сервер успешно включен")
+                else:
+                    logAndPrint("Произошла ошибка при включении радиус сервера")
             elif (dic['data'][0]['authentication'][0]['radiusAuthMethod']) == "3":
-                with open('logs.log', 'a', encoding="UTF-8") as logs:
-                    logs.write(f'\t\t{timenow()} На элементе: {ip} радиус сервер был включен ранее\n')
+                logAndPrint("Радиус сервер был включен ранее")
             
             # check settings of radius seerver, delete string if fun and set new 
             try:
-                postData = {'CGI_ID': f'GET_LCT09RAD002_01', 'USER_NAME': user,'SESSION_ID': sessionid}
-                request = session.post(full_url, headers = headers, data = postData, timeout = 20)
+                postData = {'CGI_ID': 'GET_LCT09RAD002_01', 'USER_NAME': user,'SESSION_ID': sessionid}
+                request = session.post(url, headers = headers, data = postData, timeout = 20)
                 dic = literal_eval(request.text)
                 try:
-                    if (dic['data'][0]['radiusRadiusServer'][0]['serverIndex']) == "1":
-                        lis = dic['data'][0]['radiusRadiusServer'][0]
-                        lis.update({'rowStatus': '6'}) 
-                        lis = str([lis])
+                    if (dic['data'][0]['radiusRadiusServer'][0]['serverIndex']) == serverIndex:
+                        oldServ = dic['data'][0]['radiusRadiusServer'][0]
+                        oldServ.update({'rowStatus': '6'}) 
+                        lis = str([oldServ])
                         newLis = str()
                         for i in lis:
                             if i == "'":
@@ -149,46 +153,36 @@ for ip in listIP:
                                 continue
                             else:
                                 newLis = newLis + i 
+                        if setParamRadius(newLis) == 0:
+                            logAndPrint("Удален старый радиус сервер")
+                            logAndPrint(f'Параметры удаленного сервеера: IP: {oldServ["ipAddress"]}, port: {oldServ["portNo"]}, encription: {"CHAP" if oldServ["encryptionMethod"] == "2" else "User"}, Secret Key: "{oldServ["secretKey"]}"')
 
-                        postData = {'CGI_ID': 'GET_LCT09RAD002_01', 'USER_NAME': user, 'SESSION_ID': sessionid}
-                        request = session.post(full_url, headers = headers, data = postData, timeout = 20)
+                            lis = '[{'+f'"serverIndex":"{serverIndex}","ipAddress":"{ipAddress}","portNo":"{portNo}","encryptionMethod":"{encryptionMethod}","secretKey":"{secretKey}","rowStatus":"4"'+'}]'
+                            if setParamRadius(lis) == 0:
+                                logAndPrint('Установлен новый радиус сервер')
+                            else:
+                                logAndPrint("Произошла ошибка при установке параметров нового радиус сервера")
+                        else:
+                            logAndPrint("Произлшла ошибка при удалении радиус сервера")
 
-                        postData = {'CGI_ID': 'GET_LCT09RAD002_03', "LIST": f"[{dic['data'][0]['radiusRadiusServer'][0]['serverIndex']}]", 'USER_NAME': user, 'SESSION_ID': sessionid}
-                        request = session.post(full_url, headers = headers, data = postData, timeout = 20)
-
-                        setParamRadius(f'"{newLis}"')
-                        
-                        print(f"\t Удален старый радиус  сервевр на элементе: {ip}")
-                        with open('logs.log', 'a', encoding="UTF-8") as logs:
-                            logs.write(f'\t\t{timenow()} Удален старый радиус серве {ip}\n \t\t Параметры удаленного сервеера {lis}\n')
-
-                        lis = '[{'+f'"serverIndex": "{serverIndex}" ,"ipAddress":"{ipAddress}","portNo":"{portNo}","encryptionMethod":"{encryptionMethod}","secretKey":"{secretKey}","rowStatus":"4"'+'}]' 
-                        setParamRadius(f'"{lis}"')
-                        print(f"\tУстановлен новый радиус сервевр на элементе: {ip}")
-                        with open('logs.log', 'a', encoding="UTF-8") as logs:
-                            logs.write(f'\t\t{timenow()} Установлен новый радиус серве {ip}\n')
                 except Exception:
-                    print(f'\t нет настроеных радиус серверов')
+                    logAndPrint(f'Нет настроеных радиус серверов')
                     lis = '[{'+f'"serverIndex": "{serverIndex}" ,"ipAddress":"{ipAddress}","portNo":"{portNo}","encryptionMethod":"{encryptionMethod}","secretKey":"{secretKey}","rowStatus":"4"'+'}]' 
-                    setParamRadius(lis)
-                    print(f"\t Установлен новый радиус сервевр на элементе: {ip}")
-                    with open('logs.log', 'a', encoding="UTF-8") as logs:
-                        logs.write(f'\t\t{timenow()} Установлен новый радиус сервер на элементе: {ip}\n')
-                
-            except Exception:
-                print(f'\t Не удалось настроить параметры радиус сервера')
-                print(sys.exc_info()[1])
-                with open('logs.log', 'a', encoding="UTF-8") as logs:
-                    logs.write(f'\t\t{timenow()} Не удалось настроить параметры радиус сервера на элементе: {ip}\n')
+                    if setParamRadius(lis) == 0:
+                            logAndPrint('Установлен новый радиус сервер')
+                    else:
+                        logAndPrint("Произошла ошибка при установке параметров нового радиус сервера")
 
+            except Exception:
+                logAndPrint('Не удалось настроить параметры радиус сервера')
+                logAndPrint(sys.exc_info()[1])
+                
         except Exception:
-            print(f'\t Не удалось включить радиус сервер')
-            print(sys.exc_info()[1])
-            with open('logs.log', 'a', encoding="UTF-8") as logs:
-                logs.write(f'\t\t{timenow()} Не удалось включить радиус сервер на элементе: {ip}\n')
-      
+            logAndPrint('Не удалось включить радиус сервер')
+            logAndPrint(sys.exc_info()[1])
+            
     except Exception:
-        print(f'\t Не удалось авторизоваться на элементе')
-        print(sys.exc_info()[1])
-        with open('logs.log', 'a', encoding="UTF-8") as logs:
-            logs.write(f'\t\t{timenow()}Не удалось авторизоваться на элементе: {ip}\n')
+        logAndPrint('Не удалось авторизоваться на элементе')
+        logAndPrint(sys.exc_info()[1])
+
+input("Для закрытия программы нажмите ENTER")
