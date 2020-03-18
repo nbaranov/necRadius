@@ -106,6 +106,15 @@ def checkStatus(reqiest):
 # Start programm
 # get ip adresess from file
 
+logAndPrint(f'''######################
+radius server param
+serverIndex = {serverIndex}               # line in parameters
+ipAddress = {ipAddress}      # IP adress radius server
+portNo = {portNo}                 # port number
+encryptionMethod = {encryptionMethod}          # 1 - User, 2 - CHAP
+secretKey = "{secretKey}"    # secret key
+######################''', "", 0)
+
 listIP = readFileIP('RRL_list.csv')
 
 for ip in listIP:
@@ -154,27 +163,27 @@ for ip in listIP:
                             else:
                                 newLis = newLis + i 
                         if setParamRadius(newLis) == 0:
-                            logAndPrint("Удален старый радиус сервер")
+                            logAndPrint(f"Удалены настройки радиус сервера из слота: {serverIndex}")
                             logAndPrint(f'Параметры удаленного сервеера: IP: {oldServ["ipAddress"]}, port: {oldServ["portNo"]}, encription: {"CHAP" if oldServ["encryptionMethod"] == "2" else "User"}, Secret Key: "{oldServ["secretKey"]}"')
 
                             lis = '[{'+f'"serverIndex":"{serverIndex}","ipAddress":"{ipAddress}","portNo":"{portNo}","encryptionMethod":"{encryptionMethod}","secretKey":"{secretKey}","rowStatus":"4"'+'}]'
                             if setParamRadius(lis) == 0:
-                                logAndPrint('Установлен новый радиус сервер')
+                                logAndPrint('Установлены настройки нового радиус сервера')
                             else:
                                 logAndPrint("Произошла ошибка при установке параметров нового радиус сервера")
                         else:
-                            logAndPrint("Произлшла ошибка при удалении радиус сервера")
+                            logAndPrint(f"Произлшла ошибка при удалении настроек радиус сервера из слота: {serverIndex}")
 
                 except Exception:
                     logAndPrint(f'Нет настроеных радиус серверов')
                     lis = '[{'+f'"serverIndex": "{serverIndex}" ,"ipAddress":"{ipAddress}","portNo":"{portNo}","encryptionMethod":"{encryptionMethod}","secretKey":"{secretKey}","rowStatus":"4"'+'}]' 
                     if setParamRadius(lis) == 0:
-                            logAndPrint('Установлен новый радиус сервер')
+                            logAndPrint('Установлены настройки нового радиус сервера')
                     else:
-                        logAndPrint("Произошла ошибка при установке параметров нового радиус сервера")
+                        logAndPrint(f"Произлшла ошибка при удалении настроек радиус сервера из слота: {serverIndex}")
 
             except Exception:
-                logAndPrint('Не удалось настроить параметры радиус сервера')
+                logAndPrint('Не удалось настроить параметры радиус сервера из слота: {serverIndex}')
                 logAndPrint(sys.exc_info()[1])
                 
         except Exception:
