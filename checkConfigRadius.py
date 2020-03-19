@@ -69,9 +69,6 @@ def logAndPrint(massage, ind="\t\t   ", dateform=-8):
     with open('logs.log', 'a', encoding="UTF-8") as logs:
         logs.write(f'{ind}{date} {massage}\n')
 
-# Start programm
-# get ip adresess from file
-
 listIP = readFileIP('RRL_list.csv')
 
 for ip in listIP:
@@ -88,6 +85,13 @@ for ip in listIP:
         logAndPrint(f"Подключаюсь к элементу {ip}", "", 0)
         session, sessionid = authentication(url)
         logAndPrint(f'Подключение успешно')
+
+        postData = {'CGI_ID': 'GET_LCT09RAD002_01', 'USER_NAME': user,'SESSION_ID': sessionid}
+        request = session.post(url, headers = headers, data = postData, timeout = 20)
+        dic = literal_eval(request.text)
+        dic = dic['data'][0]['radiusRadiusServer'][0]
+        logAndPrint(f'Параметры радиус сервера: IP: {dic["ipAddress"]}, port: {dic["portNo"]}, encription: {"CHAP" if dic["encryptionMethod"] == "2" else "User"}, Secret Key: "{dic["secretKey"]}"')
+
         
     except Exception:
         logAndPrint('Не удалось авторизоваться на элементе')
