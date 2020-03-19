@@ -90,7 +90,7 @@ for ip in listIP:
         request = session.post(url, headers = headers, data = postData, timeout = 20)
         dic = literal_eval(request.text)
         dic = dic['data'][0]['radiusRadiusServer'][0]
-        logAndPrint(f'Параметры нового сервера: IP: {dic["ipAddress"]}, port: {dic["portNo"]}, encription: {"CHAP" if dic["encryptionMethod"] == "2" else "User"}, Secret Key: "{dic["secretKey"]}"')
+        logAndPrint(f'Параметры радиус сервера сервера: IP: {dic["ipAddress"]}, port: {dic["portNo"]}, encription: {"CHAP" if dic["encryptionMethod"] == "2" else "User"}, Secret Key: "{dic["secretKey"]}"')
 
         
     except Exception:
