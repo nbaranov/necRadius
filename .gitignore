@@ -1,0 +1,8 @@
+#logs
+*.log
+
+#test
+test.py
+
+#RRL list
+RRL_list.csv
