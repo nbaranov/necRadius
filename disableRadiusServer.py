@@ -10,7 +10,7 @@ from functions import logAndPrint
 from getpass import getpass
 
 
-# turn on authentication over radius server
+# turn off authentication over radius server
 def turnOffRadius():    
     postData = {
         'CGI_ID': 'SET_LCT09RAD001_05', 
