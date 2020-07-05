@@ -1,15 +1,17 @@
 import requests
 import datetime
+import openpyxl
 
 from ast import literal_eval
 from bs4 import BeautifulSoup as bs
 
 def necAuth(url, user, password, headers):
+    '''Авторизация на узле NEC возвращает сессию из requests и session id для последующих запросов '''
     # get session id first step authentication
     session = requests.session()
     post_data = {'CGI_ID': 'GET_LCT01000000_01', 'userName': user, 'password': password}
     auth = session.post(url, headers = headers, data = post_data, timeout = 50)
-    soup = bs(auth.text, "lxml")
+    soup = bs(auth.text, "html.parser")
     sessionid = int(soup.find(id = "LCTSESSIONID").get('value'))
 
     # second step authentication 
@@ -40,16 +42,19 @@ def necAuth(url, user, password, headers):
 
 
 def checkStatus(request):
+    '''Проверяет статус ответа на запрос к узлу, если все ок возвращает True'''
     if int(literal_eval(request.text)['status'][0]['cgi_status']) == 0:
         return True
     return False
 
 
 def timenow():
+    '''возвращает текущие дату и время'''
     return datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")
 
 
 def readFileIP(path):
+    '''читает IP адреса из файла выгрузки Сканера программы NetSetMan'''
     ipList = []
     with open(path, 'r', encoding='utf_16_le') as inFile:
         for line in inFile:
@@ -60,7 +65,23 @@ def readFileIP(path):
 
 
 def logAndPrint(massage, ind="\t\t   ", dateform=-8):
+    '''выводит ссобщение в консоль и файл логов'''
     date = timenow()[dateform:]
     print(f"{ind}{massage}")
     with open('logs.log', 'a', encoding="UTF-8") as logs:
         logs.write(f'{ind}{date} {massage}\n')
+
+def readIPfromXLSX():
+    '''читает IP адреса из .xslx  файла таблицы скопированной
+    с сайта Смирнова. IP адреса в столбце F читает 2500 строк'''
+    wb = openpyxl.open("NEnec.xlsx")
+    lis = wb.sheetnames
+    sheet = wb[lis[0]]
+
+    ip_list = [v[0].value for v in sheet['F1:F2500']]
+    for i in range(len(ip_list) - 1, -1, -1):
+        if ip_list[i] == None:
+            ip_list.pop(i)
+    
+    return ip_list
+
