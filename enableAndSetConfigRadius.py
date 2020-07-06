@@ -1,97 +1,65 @@
+######################
+#radius server param
+SERVERINDEX = "1"               # line in parameters
+IPSERVER = "10.190.10.36"       # IP adress radius server
+PORT = "1812"                   # port number
+ENCRYPTIONMETHOD = "1"          # 1 - User, 2 - CHAP
+SECRETKEY = "nec_rrl_center"    # secret key
+######################
+
 import requests
 import sys
 
-from ast import literal_eval
-from functions import necAuth
-from functions import checkStatus
-from functions import readFileIP
-from functions import logAndPrint
 from getpass import getpass
 
-######################
-#radius server param
-serverIndex = "1"               # line in parameters
-ipAddress = "10.190.10.36"      # IP adress radius server
-portNo = "1812"                 # port number
-encryptionMethod = "1"          # 1 - User, 2 - CHAP
-secretKey = "nec_rrl_center"    # secret key
-######################
+from functions import readIPfromXLSX
+from functions import logAndPrint
+from nec import nec
 
-    # turn on authentication over radius server
-def turnOnRadius():    
-    postData = {
-        'CGI_ID': 'SET_LCT09RAD001_05', 
-        'LIST': '[{"index":"1","radiusAuthMethod":"3","radiusAuthSequence":"2"}]', 
-        'LIST_COUNT': 1, 
-        'USER_NAME': user,
-        'SESSION_ID': sessionid
-    }
-    request = session.post(url, headers = headers, data = postData, timeout = 20)
-    return checkStatus(request)
-
-# set parametrs of radius server
-def setParamRadius(lis):
-    postData = {
-        'CGI_ID': 'SET_LCT09RAD002_05', 
-        'LIST': f'{lis}',
-        'LIST_COUNT': 1,
-        'USER_NAME': user,
-        'SESSION_ID': sessionid
-        }
-    request = session.post(url, headers = headers, data = postData, timeout = 20)
-    #print(request.text)
-    return checkStatus(request)
 
 # Start programm
-# get ip adresess from file
 
-user = input("Введите логин: ")
+login = input("Введите логин: ")
 password = getpass("Введите пароль: ")
+setdic = {
+    "serverIndex":"{SERVERINDEX}",
+    "ipAddress":"{IPSERVER}",
+    "portNo":"{PORT}",
+    "encryptionMethod":"{ENCRYPTIONMETHOD}",
+    "secretKey":"{SECRETKEY}"
+}
 
 logAndPrint(f'''######################
 radius server param
-serverIndex = {serverIndex}               # line in parameters
-ipAddress = {ipAddress}      # IP adress radius server
-portNo = {portNo}                 # port number
-encryptionMethod = {encryptionMethod}          # 1 - User, 2 - CHAP
-secretKey = "{secretKey}"    # secret key
+serverIndex = {SERVERINDEX}               # line in parameters
+ipAddress = {IPSERVER}      # IP adress radius server
+portNo = {PORT}                 # port number
+encryptionMethod = {ENCRYPTIONMETHOD}          # 1 - User, 2 - CHAP
+secretKey = "{SECRETKEY}"    # secret key
 ######################''', "", 0)
 
-listIP = readFileIP('RRL_list.csv')
+
+listIP = readIPfromXLSX
 
 for ip in listIP:
-    url = f'http://{ip}/cgi/lct.cgi'
-    headers = {
-    'Connection': 'keep-alive',
-    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-    'Cookie': 'LCT_POLLTIME=NONE',
-    'Referer' : url
-    }
-
-
     try:
-        logAndPrint(f"Подключаюсь к элементу {ip}", "", 0)
-        session, sessionid = necAuth(url, user, password, headers)
-        logAndPrint(f'Подключение успешно')
+        nec = nec(ip, login, password)
         try:
-            # check status radius server and turn on if its off
-            postData = {'CGI_ID': 'GET_LCT09RAD001_01', 'USER_NAME': user, 'SESSION_ID': sessionid}
-            request = session.post(url, headers = headers, data = postData, timeout = 20)
-            dic = literal_eval(request.text)
-            if (dic['data'][0]['authentication'][0]['radiusAuthMethod']) == "1":
-                if turnOnRadius() == True:
-                    logAndPrint("Радиус сервер успешно включен")
-                else:
-                    logAndPrint("Произошла ошибка при включении радиус сервера")
-            elif (dic['data'][0]['authentication'][0]['radiusAuthMethod']) == "3":
+            if nec.checkStatusRadius():
+                nec.turnOnRadius()
+            else:
                 logAndPrint("Радиус сервер был включен ранее")
             
-            # check settings of radius seerver, delete string if fun and set new 
+            # check settings of radius seerver, delete string if find and set new 
             try:
-                postData = {'CGI_ID': 'GET_LCT09RAD002_01', 'USER_NAME': user,'SESSION_ID': sessionid}
-                request = session.post(url, headers = headers, data = postData, timeout = 20)
-                dic = literal_eval(request.text)
-                try:
+                setings = nec.getRadiusSet()
+                for set in setings:
+                    del set['rowStatus']
+                if setings[SERVERINDEX - 1]['serverIndex'] == SERVERINDEX:
+                    if setings[SERVERINDEX - 1] == setdic:
+                        logAndPrint("Радиус уже настроен заданными параметрами")
+
+
                     if (dic['data'][0]['radiusRadiusServer'][0]['serverIndex']) == serverIndex:
                         oldServ = dic['data'][0]['radiusRadiusServer'][0]
                         oldServ.update({'rowStatus': '6'}) 

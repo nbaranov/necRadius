@@ -1,55 +1,9 @@
-import requests
 import datetime
 import openpyxl
 
-from ast import literal_eval
-from bs4 import BeautifulSoup as bs
-
-def necAuth(url, user, password, headers):
-    '''Авторизация на узле NEC возвращает сессию из requests и session id для последующих запросов '''
-    # get session id first step authentication
-    session = requests.session()
-    post_data = {'CGI_ID': 'GET_LCT01000000_01', 'userName': user, 'password': password}
-    auth = session.post(url, headers = headers, data = post_data, timeout = 50)
-    soup = bs(auth.text, "html.parser")
-    sessionid = int(soup.find(id = "LCTSESSIONID").get('value'))
-
-    # second step authentication 
-    postData = {'CGI_ID': 'GET_LCT01000000_02', 'USER_NAME': user,'SESSION_ID': sessionid}
-    session.post(url, headers = headers, data = postData, timeout = 50)
-
-    # third step authentication posts
-    postData = {'CGI_ID': 'GET_LCT01000000_03', 'userName': user,'SESSION_ID': sessionid}
-    session.post(url, headers = headers, data = postData, timeout = 50)
-
-    # fourth step authentication posts
-    postData = {'CGI_ID': 'GET_LCT01000000_04', 'USER_NAME': user,'SESSION_ID': sessionid}
-    session.post(url, headers = headers, data = postData, timeout = 50)
-
-    # fifth step authentication posts
-    postData = {'CGI_ID': 'GET_LCT01000000_05', 'userName': user,'SESSION_ID': sessionid}
-    request = session.post(url, headers = headers, data = postData, timeout = 50)
-    if checkStatus(request) == False:
-        raise SystemError("Error authentication on nec RRL")
-
-    # sixth step authentication posts
-    postData = {'CGI_ID': 'GET_LCT99010100_01', 'loginuser': user, 'USER_NAME': user,'SESSION_ID': sessionid}
-    request = session.post(url, headers = headers, data = postData, timeout = 50)
-    if checkStatus(request) == False:
-        raise SystemError("Error authentication on nec RRL")
-
-    return session, sessionid
-
-
-def checkStatus(request):
-    '''Проверяет статус ответа на запрос к узлу, если все ок возвращает True'''
-    if int(literal_eval(request.text)['status'][0]['cgi_status']) == 0:
-        return True
-    return False
-
 
 def timenow():
-    '''возвращает текущие дату и время'''
+    '''возвращает текущие дату и время в формате DD.MM.YYYY HH:MM:SS'''
     return datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")
 
 
@@ -65,7 +19,10 @@ def readFileIP(path):
 
 
 def logAndPrint(massage, ind="\t\t   ", dateform=-8):
-    '''выводит ссобщение в консоль и файл логов'''
+    '''выводит ссобщение в консоль и файл логов
+    \n Первую строку вывести с параметрами "ind = "" deteform = 0"
+    в результате получит полную дату и время без смещения, 
+    а пареметры по умолчанию отрезают дату и сдвигают запись'''
     date = timenow()[dateform:]
     print(f"{ind}{massage}")
     with open('logs.log', 'a', encoding="UTF-8") as logs:
