@@ -11,8 +11,8 @@ listIP = readIPfromXLSX()
 
 for ip in listIP:
     try:
-        nec = nec(ip, login, password)
-        nec.checkConfigRadius()
+        ne = nec(ip, login, password)
+        ne.checkConfigRadius()
     except:
         sleep(1) #pause for close script
         continue

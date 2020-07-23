@@ -11,6 +11,7 @@ import requests
 import sys
 
 from getpass import getpass
+from time import sleep
 
 from functions import readIPfromXLSX
 from functions import logAndPrint
@@ -22,11 +23,11 @@ from nec import nec
 login = input("Введите логин: ")
 password = getpass("Введите пароль: ")
 setdic = {
-    "serverIndex":"{SERVERINDEX}",
-    "ipAddress":"{IPSERVER}",
-    "portNo":"{PORT}",
-    "encryptionMethod":"{ENCRYPTIONMETHOD}",
-    "secretKey":"{SECRETKEY}"
+    "serverIndex":SERVERINDEX,
+    "ipAddress":IPSERVER,
+    "portNo":PORT,
+    "encryptionMethod":ENCRYPTIONMETHOD,
+    "secretKey":SECRETKEY
 }
 
 logAndPrint(f'''######################
@@ -39,76 +40,60 @@ secretKey = "{SECRETKEY}"    # secret key
 ######################''', "", 0)
 
 
-listIP = readIPfromXLSX
+listIP = readIPfromXLSX("NEnec.xlsx")
 
 for ip in listIP:
     try:
-        nec = nec(ip, login, password)
+        ne = nec(ip, login, password)
         try:
-            if nec.checkStatusRadius():
-                nec.turnOnRadius()
+            if not ne.checkStatusRadius():
+                ne.turnOnRadius()
             else:
                 logAndPrint("Радиус сервер был включен ранее")
             
             # check settings of radius seerver, delete string if find and set new 
             try:
-                setings = nec.getRadiusSet()
+                setings = ne.getRadiusSet()
                 for set in setings:
                     del set['rowStatus']
-                if setings[SERVERINDEX - 1]['serverIndex'] == SERVERINDEX:
-                    if setings[SERVERINDEX - 1] == setdic:
-                        logAndPrint("Радиус уже настроен заданными параметрами")
+                if setings[int(SERVERINDEX) - 1]['serverIndex'] == SERVERINDEX:
+                    try:
+                        if setings[int(SERVERINDEX) - 1] == setdic:    
+                            logAndPrint("Радиус уже настроен заданными параметрами")
+                        elif (setings[int(SERVERINDEX) - 1]['serverIndex']) == SERVERINDEX:
+                            oldServ = setings[int(SERVERINDEX) - 1]
+                            if ne.delParamRadius(oldServ) == True:
+                                logAndPrint("Удален старый радиус сервер")
+                                logAndPrint(f'Параметры удаленного сервера: IP: {oldServ["ipAddress"]}, port: {oldServ["portNo"]}, encription: {"CHAP" if oldServ["encryptionMethod"] == "2" else "User"}, Secret Key: "{oldServ["secretKey"]}"')
 
-
-                    if (dic['data'][0]['radiusRadiusServer'][0]['serverIndex']) == serverIndex:
-                        oldServ = dic['data'][0]['radiusRadiusServer'][0]
-                        oldServ.update({'rowStatus': '6'}) 
-                        lis = str([oldServ])
-                        newLis = str()
-                        for i in lis:
-                            if i == "'":
-                                newLis = newLis + '"'
-                            elif i == " ":
-                                continue
+                                if ne.setParamRadius(setdic) == True:
+                                    logAndPrint('Установлен новый радиус сервер')
+                                    setings = ne.getRadiusSet()
+                                    setings = setings[int(SERVERINDEX) - 1]
+                                    logAndPrint(f'Параметры нового сервера: IP: {setings["ipAddress"]}, port: {setings["portNo"]}, encription: {"CHAP" if setings["encryptionMethod"] == "2" else "User"}, Secret Key: "{setings["secretKey"]}"')
+                                else:
+                                    logAndPrint("Произошла ошибка при установке параметров нового радиус сервера")
                             else:
-                                newLis = newLis + i 
-                        if setParamRadius(newLis) == True:
-                            logAndPrint("Удален старый радиус сервер")
-                            logAndPrint(f'Параметры удаленного сервера: IP: {oldServ["ipAddress"]}, port: {oldServ["portNo"]}, encription: {"CHAP" if oldServ["encryptionMethod"] == "2" else "User"}, Secret Key: "{oldServ["secretKey"]}"')
-
-                            lis = '[{'+f'"serverIndex":"{serverIndex}","ipAddress":"{ipAddress}","portNo":"{portNo}","encryptionMethod":"{encryptionMethod}","secretKey":"{secretKey}","rowStatus":"4"'+'}]'
-                            if setParamRadius(lis) == True:
-                                logAndPrint('Установлен новый радиус сервер')
-
-                                postData = {'CGI_ID': 'GET_LCT09RAD002_01', 'USER_NAME': user,'SESSION_ID': sessionid}
-                                request = session.post(url, headers = headers, data = postData, timeout = 20)
-                                dic = literal_eval(request.text)
-                                dic = dic['data'][0]['radiusRadiusServer'][0]
-                                logAndPrint(f'Параметры нового сервера: IP: {dic["ipAddress"]}, port: {dic["portNo"]}, encription: {"CHAP" if dic["encryptionMethod"] == "2" else "User"}, Secret Key: "{dic["secretKey"]}"')
-
-                            else:
-                                logAndPrint("Произошла ошибка при установке параметров нового радиус сервера")
-                        else:
-                            logAndPrint(f"Произлшла ошибка при удалении настроек радиус сервера из слота: {serverIndex}")
-
-                except Exception:
-                    logAndPrint(f'Нет настроеных радиус серверов')
-                    lis = '[{'+f'"serverIndex": "{serverIndex}" ,"ipAddress":"{ipAddress}","portNo":"{portNo}","encryptionMethod":"{encryptionMethod}","secretKey":"{secretKey}","rowStatus":"4"'+'}]' 
-                    if setParamRadius(lis) == 0:
-                            logAndPrint('Установлены настройки нового радиус сервера')
-                    else:
-                        logAndPrint(f"Произлшла ошибка при удалении настроек радиус сервера из слота: {serverIndex}")
+                                logAndPrint(f"Произлшла ошибка при удалении настроек радиус сервера из слота: {SERVERINDEX}")
+                    
+                    except Exception:
+                        logAndPrint(f'Не удалось настроить параметры радиус сервера из слота: {SERVERINDEX}')
+                        logAndPrint(sys.exc_info()[1])
 
             except Exception:
-                logAndPrint(f'Не удалось настроить параметры радиус сервера из слота: {serverIndex}')
-                logAndPrint(sys.exc_info()[1])
+                logAndPrint(f'Нет настроеных радиус серверов')
+                if ne.setParamRadius(setdic) == True:
+                        logAndPrint('Установлены настройки нового радиус сервера')
+                else:
+                    logAndPrint(f'Не удалось настроить параметры радиус сервера из слота: {SERVERINDEX}')
                 
         except Exception:
             logAndPrint('Не удалось включить радиус сервер')
             logAndPrint(sys.exc_info()[1])
             
     except Exception:
-        logAndPrint('Не удалось авторизоваться на элементе')
-        logAndPrint(sys.exc_info()[1])
+        sleep(1) # пауза для прерывания
+        continue
+        
 
 input("Для закрытия программы нажмите ENTER")

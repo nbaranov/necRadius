@@ -21,39 +21,42 @@ class nec():
         'Referer' : self.url
         }
         logAndPrint(f"Подключаюсь к элементу {ip}", "", 0)
-        # get session id first step authentication
-        self.session = requests.session()
-        postData = {'CGI_ID': 'GET_LCT01000000_01', 'userName': self.login, 'password': password}
-        auth = self.post(postData, 50)
-        soup = bs(auth.text, "html.parser")
-        self.sessionID = int(soup.find(id = "LCTSESSIONID").get('value'))
+        try:
+            # get session id first step authentication
+            self.session = requests.session()
+            postData = {'CGI_ID': 'GET_LCT01000000_01', 'userName': self.login, 'password': password}
+            auth = self.post(postData, 50)
+            soup = bs(auth.text, "html.parser")
+            self.sessionID = int(soup.find(id = "LCTSESSIONID").get('value'))
 
-        # second step authentication 
-        postData = {'CGI_ID': 'GET_LCT01000000_02', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
-        self.post(postData, timeout = 50)
+            # second step authentication 
+            postData = {'CGI_ID': 'GET_LCT01000000_02', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
+            self.post(postData, timeout = 50)
 
-        # third step authentication posts
-        postData = {'CGI_ID': 'GET_LCT01000000_03', 'userName': self.login,'SESSION_ID': self.sessionID}
-        self.post(postData, timeout = 50)
+            # third step authentication posts
+            postData = {'CGI_ID': 'GET_LCT01000000_03', 'userName': self.login,'SESSION_ID': self.sessionID}
+            self.post(postData, timeout = 50)
 
-        # fourth step authentication posts
-        postData = {'CGI_ID': 'GET_LCT01000000_04', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
-        self.post(postData, timeout = 50)
+            # fourth step authentication posts
+            postData = {'CGI_ID': 'GET_LCT01000000_04', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
+            self.post(postData, timeout = 50)
 
-        # fifth step authentication posts
-        postData = {'CGI_ID': 'GET_LCT01000000_05', 'userName': self.login,'SESSION_ID': self.sessionID}
-        response = self.post(postData, timeout = 50)
-        if self.checkStatus(response) == False:
-            logAndPrint(f"Не удалось авторизоваться на сетевом элементе{ip}")
-            raise SystemError("Не удалось авторизоваться на сетевом элементе")
+            # fifth step authentication posts
+            postData = {'CGI_ID': 'GET_LCT01000000_05', 'userName': self.login,'SESSION_ID': self.sessionID}
+            response = self.post(postData, timeout = 50)
+            if self.checkStatus(response) == False:
+                raise SystemError("Не удалось авторизоваться на сетевом элементе")
 
-        # sixth step authentication posts
-        postData = {'CGI_ID': 'GET_LCT99010100_01', 'loginuser': self.login, 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
-        response = self.post(postData, timeout = 50)
-        if self.checkStatus(response) == False:
-            logAndPrint(f"Не удалось авторизоваться на сетевом элементе{ip}")
-            raise SystemError("Не удалось авторизоваться на сетевом элементе")
-        logAndPrint("Авторизация успешно пройдена")
+            # sixth step authentication posts
+            postData = {'CGI_ID': 'GET_LCT99010100_01', 'loginuser': self.login, 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
+            response = self.post(postData, timeout = 50)
+            if self.checkStatus(response) == False:             
+                raise SystemError("Не удалось авторизоваться на сетевом элементе")
+            logAndPrint("Авторизация успешно пройдена")
+
+        except:
+            logAndPrint(f"Не удалось авторизоваться на сетевом элементе {ip}")
+
 
 
     def post(self, postData, timeout = 30):
@@ -79,15 +82,15 @@ class nec():
 
     def turnOnRadius(self):
         '''Включает Радиус сервер на сетевом элементе
-        \nНичего не возвращает, результат выводит в консоль'''    
+        \nНичего не возвращает, результат выводит в консоль и лог'''    
         postData = {
         'CGI_ID': 'SET_LCT09RAD001_05', 
         'LIST': '[{"index":"1","radiusAuthMethod":"3","radiusAuthSequence":"2"}]', 
         'LIST_COUNT': 1, 
-        'USER_NAME': self.user,
-        'SESSION_ID': self.sessionid
+        'USER_NAME': self.login,
+        'SESSION_ID': self.sessionID
         }
-        response = nec.post(postData, timeout = 20)
+        response = self.post(postData, timeout = 20)
         if self.checkStatus(response):
             logAndPrint("Радиус сервер успешно включен")
         else:
@@ -99,8 +102,8 @@ class nec():
         \n Возвращает значение:
         \nTrue - сервер включен
         \nFalse - сервер выключен'''
-        postData = {'CGI_ID': 'GET_LCT09RAD001_01', 'USER_NAME': self.user, 'SESSION_ID': self.sessionid}
-        response = session.post(url, headers = headers, data = postData, timeout = 20)
+        postData = {'CGI_ID': 'GET_LCT09RAD001_01', 'USER_NAME': self.login, 'SESSION_ID': self.sessionID}
+        response = self.post(postData, timeout = 20)
         dic = literal_eval(response.text)
         gsiStatus = int(dic['data'][0]['authentication'][0]['radiusAuthMethod'])
         if gsiStatus ==  3:
@@ -118,15 +121,34 @@ class nec():
         \n "secretKey" = "secret"} - Секретный ключ для подключения к серверу
         \n Возвращает True если параметры установлены успешно или False в противном случае
         '''
+        params.update({"rowStatus":"4"})
+        params = self.formatList(params)
         postData = {
         'CGI_ID': 'SET_LCT09RAD002_05', 
-        'LIST': f'{params}',
+        'LIST': params,
         'LIST_COUNT': 1,
-        'USER_NAME': self.user,
+        'USER_NAME': self.login,
         'SESSION_ID': self.sessionID
         }
         response = self.post(postData, timeout = 20)
-        return checkStatus(response)   
+        return self.checkStatus(response)   
+
+
+    def delParamRadius(self, params):
+        '''Удаляет параметры радиус сервера переданные в словаре
+        \n Возвращает True если удаление прошло успешно успешно или False в противном случае
+        '''
+        params.update({"rowStatus":"6"})
+        params = self.formatList(params)
+        postData = {
+        'CGI_ID': 'SET_LCT09RAD002_05', 
+        'LIST': params,
+        'LIST_COUNT': 1,
+        'USER_NAME': self.login,
+        'SESSION_ID': self.sessionID
+        }
+        response = self.post(postData, timeout = 20)
+        return self.checkStatus(response)   
 
 
     def getRadiusSet(self):
@@ -137,3 +159,82 @@ class nec():
         response = literal_eval(response.text) 
         radiusSet = response['data'][0]['radiusRadiusServer']
         return radiusSet
+
+
+    def getSNMPset(self):
+        '''Получение настроек SNMP. Возвращает словарь с параметрами SNMP'''
+        postData = {'CGI_ID' : 'GET_LCT09040200_01', 'USER_NAME': self.login, 'SESSION_ID': self.sessionID}
+        response = self.post(postData)
+        response = literal_eval(response.text)
+        snmpSet = response['data'][0]
+        return snmpSet
+
+    
+    def turnOnSNMP(self, setList):
+        '''Включение SNMPv2. Ничего не возвращает, Результат пишет в консоль и лог'''
+        print(setList)
+        setList = {'Index': setList["snmIndex"], 'snmpv1v2c': '2', 'snmpv3': setList["snmpv3"], 'udpPort' : setList["udpPort"]}
+        print(setList)
+        print()
+        newLis = self.formatList(setList)
+
+        postData = {
+        "CGI_ID" : "SET_LCT09040200_11",
+        "LIST" : newLis,
+        "LIST_COUNT" : "1",
+        "USER_NAME" : self.login,
+        "SESSION_ID" : self.sessionID
+        }
+        print(postData)
+        response = self.post(postData)
+        if self.checkStatus(response):
+            logAndPrint("SNMPv2 успешно включен")
+        else: logAndPrint("Ошибка при включении SNMPv2")
+
+
+    def setSNMPcom(self, index, comName, accLevel, accControl, adress, mask):
+        '''Устанавливает параметры SNMP Community в указанный слот.
+        Если слот занят, удалит параметры, которые были там настроены'''
+        snmp = self.getSNMPset()
+        comm = snmp["snmpCommunity"]
+        for line in comm:
+            if line['comIndex'] == str(index):
+                lis = '[{' + f'"Index":{index},"snmpRowStatus":"6"' + '}]'
+                postData = {
+                    'CGI_ID': 'SET_LCT09040200_20',
+                    'LIST': lis,
+                    'LIST_COUNT': '1',
+                    'USER_NAME': self.login,
+                    'SESSION_ID': self.sessionID
+                    }
+                if self.checkStatus(self.post(postData)):
+                    logAndPrint(f"Удалено SNMP community{line}")
+                else: logAndPrint("Произошла ошибка при удалении старого SNMP community")
+        
+        lis = '[{' + f'"Index":"{str(index)}","communityName":"{str(comName)}","accessLevel":"{str(accLevel)}"\
+,"accessControl":"{str(accControl)}","snmpRowStatus":"4","accessAddress":"{str(adress)}","subnetMask":"{str(mask)}"' + '}]'
+
+        postData = {
+            'LIST': lis, 
+            'CGI_ID': 'SET_LCT09040200_12',
+            'LIST_COUNT': '1',
+            'USER_NAME': self.login,
+            'SESSION_ID': self.sessionID
+            }
+        if self.checkStatus(self.post(postData)):
+            logAndPrint("Параметры нового SNMP community успешно установлены")
+
+
+    def formatList(self, lis):
+        '''Форматирует список параметров в строку понятною CGI'''
+        lis = str([lis])
+        newLis = str()
+        for i in lis:
+            if i == "'":
+                newLis = newLis + '"'
+            elif i == " ":
+                continue
+            else:
+                newLis = newLis + i
+        return newLis
+

@@ -28,10 +28,10 @@ def logAndPrint(massage, ind="\t\t   ", dateform=-8):
     with open('logs.log', 'a', encoding="UTF-8") as logs:
         logs.write(f'{ind}{date} {massage}\n')
 
-def readIPfromXLSX():
+def readIPfromXLSX(path = "NEnec.xlsx"):
     '''читает IP адреса из .xslx  файла таблицы скопированной
     с сайта Смирнова. IP адреса в столбце F читает 2500 строк'''
-    wb = openpyxl.open("NEnec.xlsx")
+    wb = openpyxl.open(path)
     lis = wb.sheetnames
     sheet = wb[lis[0]]
 
