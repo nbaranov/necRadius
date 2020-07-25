@@ -14,8 +14,8 @@ from functions import readIPfromXLSX
 from functions import logAndPrint
 from nec import nec
 
-login =  'NiVBaranov' #input("Введите логин: ")
-password = '8OSmerka10' #getpass("Введите пароль: ")
+login =  input("Введите логин: ")
+password = getpass("Введите пароль: ")
 
 listIP = readIPfromXLSX()
 for i in range(len(listIP)):
