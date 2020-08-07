@@ -92,6 +92,7 @@ for ip in listIP:
             logAndPrint(sys.exc_info()[1])
             
     except Exception:
+        logAndPrint('Не удалось авторизоваться на элементе')
         sleep(1) # пауза для прерывания
         continue
         

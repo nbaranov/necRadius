@@ -29,6 +29,7 @@ for i in range(len(listIP)):
 
         ne.setSNMPcom(INDEX, COMNAME, ACCLEVEL, ACCCONTROL, ACCADRESS, SUBNETMASK)
     except:
+        logAndPrint('Не удалось авторизоваться на элементе')
         sleep(1) # пауза для прерывания
         continue
 
