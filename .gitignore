@@ -6,9 +6,11 @@ test.py
 
 #RRL list
 RRL_list.csv
+NEnec.xlsx
 
 #copy open files
 *~
 
 # pycache
 __pycache__
+
