@@ -14,7 +14,7 @@ for ip in listIP:
         ne = nec(ip, login, password)
         ne.checkConfigRadius()
     except:
-        sleep(1) #pause for close script
+        sleep(1)  # pause for close script
         continue
 
 input("Для закрытия программы нажмите ENTER")

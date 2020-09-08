@@ -21,41 +21,38 @@ class nec():
         'Referer' : self.url
         }
         logAndPrint(f"Подключаюсь к элементу {ip}", "", 0)
-        try:
-            # get session id first step authentication
-            self.session = requests.session()
-            postData = {'CGI_ID': 'GET_LCT01000000_01', 'userName': self.login, 'password': password}
-            auth = self.post(postData, 50)
-            soup = bs(auth.text, "html.parser")
-            self.sessionID = int(soup.find(id = "LCTSESSIONID").get('value'))
+        # get session id first step authentication
+        self.session = requests.session()
+        postData = {'CGI_ID': 'GET_LCT01000000_01', 'userName': self.login, 'password': password}
+        auth = self.post(postData, 50)
+        soup = bs(auth.text, "html.parser")
+        self.sessionID = int(soup.find(id = "LCTSESSIONID").get('value'))
 
-            # second step authentication 
-            postData = {'CGI_ID': 'GET_LCT01000000_02', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
-            self.post(postData, timeout = 50)
+        # second step authentication 
+        postData = {'CGI_ID': 'GET_LCT01000000_02', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
+        self.post(postData, timeout = 50)
 
-            # third step authentication posts
-            postData = {'CGI_ID': 'GET_LCT01000000_03', 'userName': self.login,'SESSION_ID': self.sessionID}
-            self.post(postData, timeout = 50)
+        # third step authentication posts
+        postData = {'CGI_ID': 'GET_LCT01000000_03', 'userName': self.login,'SESSION_ID': self.sessionID}
+        self.post(postData, timeout = 50)
 
-            # fourth step authentication posts
-            postData = {'CGI_ID': 'GET_LCT01000000_04', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
-            self.post(postData, timeout = 50)
+        # fourth step authentication posts
+        postData = {'CGI_ID': 'GET_LCT01000000_04', 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
+        self.post(postData, timeout = 50)
 
-            # fifth step authentication posts
-            postData = {'CGI_ID': 'GET_LCT01000000_05', 'userName': self.login,'SESSION_ID': self.sessionID}
-            response = self.post(postData, timeout = 50)
-            if self.checkStatus(response) == False:
-                raise SystemError("Не удалось авторизоваться на сетевом элементе")
+        # fifth step authentication posts
+        postData = {'CGI_ID': 'GET_LCT01000000_05', 'userName': self.login,'SESSION_ID': self.sessionID}
+        response = self.post(postData, timeout = 50)
+        if self.checkStatus(response) == False:
+            raise SystemError("Не удалось авторизоваться на сетевом элементе")
 
-            # sixth step authentication posts
-            postData = {'CGI_ID': 'GET_LCT99010100_01', 'loginuser': self.login, 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
-            response = self.post(postData, timeout = 50)
-            if self.checkStatus(response) == False:             
-                raise SystemError("Не удалось авторизоваться на сетевом элементе")
-            logAndPrint("Авторизация успешно пройдена")
+        # sixth step authentication posts
+        postData = {'CGI_ID': 'GET_LCT99010100_01', 'loginuser': self.login, 'USER_NAME': self.login,'SESSION_ID': self.sessionID}
+        response = self.post(postData, timeout = 50)
+        if self.checkStatus(response) == False:             
+            raise SystemError("Не удалось авторизоваться на сетевом элементе")
+        logAndPrint("Авторизация успешно пройдена")
 
-        except:
-            logAndPrint(f"Не удалось авторизоваться на сетевом элементе {ip}")
 
 
 
